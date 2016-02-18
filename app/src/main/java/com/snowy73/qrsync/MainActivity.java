@@ -11,16 +11,23 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.widget.CompoundButton;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.snowy73.qrsync.barcode.BarcodeCaptureActivity;
 import com.snowy73.qrsync.gcm.RegistrationIntentService;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -29,9 +36,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private BroadcastReceiver mRegistrationBroadcastReceiver;
 
-    // use a compound button so either checkbox or switch widgets work.
     private TextView statusMessage;
-    private TextView barcodeValue;
+    private ProgressBar busy;
 
     private static final int RC_BARCODE_CAPTURE = 9001;
 
@@ -41,9 +47,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
         statusMessage = (TextView) findViewById(R.id.status_message);
-        barcodeValue = (TextView) findViewById(R.id.barcode_value);
+        busy = (ProgressBar) findViewById(R.id.busy);
 
         findViewById(R.id.read_barcode).setOnClickListener(this);
+        findViewById(R.id.unpair).setOnClickListener(this);
 
         mRegistrationBroadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -115,6 +122,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             startActivityForResult(intent, RC_BARCODE_CAPTURE);
         }
+        if (v.getId() == R.id.unpair) {
+
+        }
     }
 
     /**
@@ -146,8 +156,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (data != null) {
                     Barcode barcode = data.getParcelableExtra(BarcodeCaptureActivity.BarcodeObject);
                     statusMessage.setText(R.string.barcode_success);
-                    barcodeValue.setText(barcode.rawValue);
                     Log.d(TAG, "Barcode read: " + barcode.rawValue);
+
+                    busy.setVisibility(ProgressBar.VISIBLE);
+                    SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                    String registration_id = sharedPreferences.getString(QRSyncPreferences.REGISTRATION_ID, "");
+                    try {
+                        String url = "http://192.168.137.1:8000/pair";
+                        JSONObject json = new JSONObject();
+                        json.put("token", barcode.rawValue);
+                        json.put("registration_id", registration_id);
+                        JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                                (Request.Method.POST, url, json, new Response.Listener<JSONObject>() {
+                                    @Override
+                                    public void onResponse(JSONObject response) {
+                                        busy.setVisibility(ProgressBar.GONE);
+                                        statusMessage.setText(response.toString());
+                                    }
+                                }, new Response.ErrorListener() {
+                                    @Override
+                                    public void onErrorResponse(VolleyError error) {
+                                        busy.setVisibility(ProgressBar.GONE);
+                                        statusMessage.setText(error.toString());
+                                    }
+                                });
+
+                        MySingleton.getInstance(this).addToRequestQueue(jsObjRequest);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                 } else {
                     statusMessage.setText(R.string.barcode_failure);
                     Log.d(TAG, "No barcode captured, intent data is null");
