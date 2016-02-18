@@ -29,10 +29,10 @@ dependencies {
 
     compile 'com.google.android.gms:play-services-gcm:8.4.0'
     compile 'com.google.android.gms:play-services-vision:8.4.0'
+    compile 'com.android.volley:volley:1.0.0'
     compile 'com.android.support:appcompat-v7:23.1.1'
     compile 'com.android.support:design:23.1.1'
 
-    compile project(":volley")
 }
 
 apply plugin: 'com.google.gms.google-services'
