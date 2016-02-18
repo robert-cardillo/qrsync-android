@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.snowy73.qrsync;
+package com.snowy73.qrsync.gcm;
 
 import android.content.Intent;
 

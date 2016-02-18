@@ -1,4 +1,4 @@
-package com.snowy73.qrsync;
+package com.snowy73.qrsync.barcode;
 
 
 import android.graphics.Canvas;
@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 
 import com.google.android.gms.vision.barcode.Barcode;
+import com.snowy73.qrsync.barcode.camera.ui.GraphicOverlay;
 
 /**
  * Graphic instance for rendering barcode position, size, and ID within an associated graphic

@@ -1,4 +1,4 @@
-package com.snowy73.qrsync;
+package com.snowy73.qrsync.barcode.camera.ui;
 
 
 import android.Manifest;

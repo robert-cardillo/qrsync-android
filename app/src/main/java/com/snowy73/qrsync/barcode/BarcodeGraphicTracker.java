@@ -1,8 +1,9 @@
-package com.snowy73.qrsync;
+package com.snowy73.qrsync.barcode;
 
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.barcode.Barcode;
+import com.snowy73.qrsync.barcode.camera.ui.GraphicOverlay;
 
 /**
  * Generic tracker which is used for tracking or reading a barcode (and can really be used for
@@ -13,10 +14,27 @@ import com.google.android.gms.vision.barcode.Barcode;
 class BarcodeGraphicTracker extends Tracker<Barcode> {
     private GraphicOverlay<BarcodeGraphic> mOverlay;
     private BarcodeGraphic mGraphic;
+    // http://stackoverflow.com/questions/32021193
+    private Callback mCallback;
 
+    // http://stackoverflow.com/questions/32021193
+    /*
     BarcodeGraphicTracker(GraphicOverlay<BarcodeGraphic> overlay, BarcodeGraphic graphic) {
         mOverlay = overlay;
         mGraphic = graphic;
+    }
+    */
+
+    // http://stackoverflow.com/questions/32021193
+    BarcodeGraphicTracker(GraphicOverlay<BarcodeGraphic> overlay, BarcodeGraphic graphic, Callback callback) {
+        mOverlay = overlay;
+        mGraphic = graphic;
+        mCallback = callback;
+    }
+
+    // http://stackoverflow.com/questions/32021193
+    public interface Callback {
+        void onFound(Barcode barcode);
     }
 
     /**
@@ -34,6 +52,10 @@ class BarcodeGraphicTracker extends Tracker<Barcode> {
     public void onUpdate(Detector.Detections<Barcode> detectionResults, Barcode item) {
         mOverlay.add(mGraphic);
         mGraphic.updateItem(item);
+        // http://stackoverflow.com/questions/32021193/
+        if(item != null){
+            mCallback.onFound(item);
+        }
     }
 
     /**

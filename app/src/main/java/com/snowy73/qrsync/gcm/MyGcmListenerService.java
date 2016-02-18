@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.snowy73.qrsync;
+package com.snowy73.qrsync.gcm;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -27,6 +27,8 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import com.google.android.gms.gcm.GcmListenerService;
+import com.snowy73.qrsync.MainActivity;
+import com.snowy73.qrsync.R;
 
 public class MyGcmListenerService extends GcmListenerService {
 

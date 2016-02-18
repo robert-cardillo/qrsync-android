@@ -7,16 +7,16 @@
     android:layout_height="match_parent"
     android:keepScreenOn="true">
 
-    <com.snowy73.qrsync.CameraSourcePreview
+    <com.snowy73.qrsync.barcode.camera.ui.CameraSourcePreview
         android:id="@+id/preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <com.snowy73.qrsync.GraphicOverlay
+        <com.snowy73.qrsync.barcode.camera.ui.GraphicOverlay
             android:id="@+id/graphicOverlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-    </com.snowy73.qrsync.CameraSourcePreview>
+    </com.snowy73.qrsync.barcode.camera.ui.CameraSourcePreview>
 
 </LinearLayout>
