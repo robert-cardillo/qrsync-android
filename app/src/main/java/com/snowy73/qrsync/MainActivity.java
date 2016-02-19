@@ -11,9 +11,9 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.Response;
@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private TextView statusMessage;
     private ProgressBar busy;
+    private Button pair;
 
     private static final int RC_BARCODE_CAPTURE = 9001;
 
@@ -46,23 +47,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
         statusMessage = (TextView) findViewById(R.id.status_message);
         busy = (ProgressBar) findViewById(R.id.busy);
-
-        findViewById(R.id.read_barcode).setOnClickListener(this);
-        findViewById(R.id.unpair).setOnClickListener(this);
+        pair = (Button) findViewById(R.id.pair);
+        pair.setOnClickListener(this);
+        if (sharedPreferences.getString(QRSyncPreferences.TOKEN, null) != null) {
+            pair.setText(R.string.unpair);
+            statusMessage.setText(R.string.device_is_paired);
+        }
 
         mRegistrationBroadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                SharedPreferences sharedPreferences =
-                        PreferenceManager.getDefaultSharedPreferences(context);
-                boolean sentToken = sharedPreferences
-                        .getBoolean(QRSyncPreferences.SENT_TOKEN_TO_SERVER, false);
-                if (!sentToken) {
-                    Toast toast = Toast.makeText(context, R.string.token_error_message, Toast.LENGTH_SHORT);
-                    toast.show();
+                switch (intent.getAction())
+                {
+                    case QRSyncPreferences.REGISTRATION_COMPLETE:
+                        boolean sentToken = sharedPreferences
+                                .getBoolean(QRSyncPreferences.SENT_TOKEN_TO_SERVER, false);
+                        if (!sentToken) {
+                            statusMessage.setText(R.string.token_error_message);
+                        }
+                        break;
+                    case QRSyncPreferences.DEVICE_PAIRED:
+                        statusMessage.setText(R.string.device_is_paired);
+                        pair.setText(R.string.unpair);
+                        break;
+                    case QRSyncPreferences.DEVICE_UNPAIRED:
+                        statusMessage.setText(R.string.barcode_header);
+                        pair.setText(R.string.read_barcode);
+                        break;
                 }
+
             }
         };
 
@@ -78,6 +95,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onResume();
         LocalBroadcastManager.getInstance(this).registerReceiver(mRegistrationBroadcastReceiver,
                 new IntentFilter(QRSyncPreferences.REGISTRATION_COMPLETE));
+        LocalBroadcastManager.getInstance(this).registerReceiver(mRegistrationBroadcastReceiver,
+                new IntentFilter(QRSyncPreferences.DEVICE_PAIRED));
+        LocalBroadcastManager.getInstance(this).registerReceiver(mRegistrationBroadcastReceiver,
+                new IntentFilter(QRSyncPreferences.DEVICE_UNPAIRED));
     }
 
     @Override
@@ -114,16 +135,57 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void onClick(View v) {
-        if (v.getId() == R.id.read_barcode) {
-            // launch barcode activity.
-            Intent intent = new Intent(this, BarcodeCaptureActivity.class);
-            intent.putExtra(BarcodeCaptureActivity.AutoFocus, true);
-            intent.putExtra(BarcodeCaptureActivity.UseFlash, false);
+        final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        if (v.getId() == R.id.pair) {
+            final String token = sharedPreferences.getString(QRSyncPreferences.TOKEN, null);
+            if (token == null) {
+                // launch barcode activity.
+                Intent intent = new Intent(this, BarcodeCaptureActivity.class);
+                intent.putExtra(BarcodeCaptureActivity.AutoFocus, true);
+                intent.putExtra(BarcodeCaptureActivity.UseFlash, false);
 
-            startActivityForResult(intent, RC_BARCODE_CAPTURE);
-        }
-        if (v.getId() == R.id.unpair) {
+                startActivityForResult(intent, RC_BARCODE_CAPTURE);
+            } else {
+                try {
+                    busy.setVisibility(ProgressBar.VISIBLE);
+                    String registration_id = sharedPreferences.getString(QRSyncPreferences.REGISTRATION_ID, null);
 
+                    String url = MySingleton.getURL() + "/unpair";
+                    JSONObject json = new JSONObject();
+                    json.put("token", token);
+                    json.put("registration_id", registration_id);
+                    JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                            (Request.Method.POST, url, json, new Response.Listener<JSONObject>() {
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    try {
+                                        busy.setVisibility(ProgressBar.GONE);
+                                        String status = response.getString("status");
+                                        if (status.equals("success")) {
+                                            sharedPreferences.edit().remove(QRSyncPreferences.TOKEN).apply();
+                                            Intent broadcastIntent = new Intent(QRSyncPreferences.DEVICE_UNPAIRED);
+                                            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(broadcastIntent);
+                                        } else {
+                                            String error = response.getString("error");
+                                            statusMessage.setText(error);
+                                        }
+
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }, new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    busy.setVisibility(ProgressBar.GONE);
+                                    statusMessage.setText(error.toString());
+                                }
+                            });
+                    MySingleton.getInstance(this).addToRequestQueue(jsObjRequest);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -151,18 +213,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         if (requestCode == RC_BARCODE_CAPTURE) {
             if (resultCode == CommonStatusCodes.SUCCESS) {
                 if (data != null) {
-                    Barcode barcode = data.getParcelableExtra(BarcodeCaptureActivity.BarcodeObject);
-                    statusMessage.setText(R.string.barcode_success);
-                    Log.d(TAG, "Barcode read: " + barcode.rawValue);
-
-                    busy.setVisibility(ProgressBar.VISIBLE);
-                    SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                    String registration_id = sharedPreferences.getString(QRSyncPreferences.REGISTRATION_ID, "");
                     try {
-                        String url = "http://192.168.137.1:8000/pair";
+                        final Barcode barcode = data.getParcelableExtra(BarcodeCaptureActivity.BarcodeObject);
+                        statusMessage.setText(R.string.pairing_device);
+                        Log.d(TAG, "Barcode read: " + barcode.rawValue);
+
+                        busy.setVisibility(ProgressBar.VISIBLE);
+                        String registration_id = sharedPreferences.getString(QRSyncPreferences.REGISTRATION_ID, null);
+
+                        String url = MySingleton.getURL() + "/pair";
                         JSONObject json = new JSONObject();
                         json.put("token", barcode.rawValue);
                         json.put("registration_id", registration_id);
@@ -170,8 +233,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 (Request.Method.POST, url, json, new Response.Listener<JSONObject>() {
                                     @Override
                                     public void onResponse(JSONObject response) {
-                                        busy.setVisibility(ProgressBar.GONE);
-                                        statusMessage.setText(response.toString());
+                                        try {
+                                            busy.setVisibility(ProgressBar.GONE);
+                                            String status = response.getString("status");
+                                            if (status.equals("success")) {
+                                                sharedPreferences.edit().putString(QRSyncPreferences.TOKEN, barcode.rawValue).apply();
+                                                Intent broadcastIntent = new Intent(QRSyncPreferences.DEVICE_PAIRED);
+                                                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(broadcastIntent);
+                                            } else {
+                                                String error = response.getString("error");
+                                                statusMessage.setText(error);
+                                            }
+
+                                        } catch (JSONException e) {
+                                            e.printStackTrace();
+                                        }
                                     }
                                 }, new Response.ErrorListener() {
                                     @Override
