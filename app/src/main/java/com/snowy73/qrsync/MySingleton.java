@@ -14,8 +14,8 @@ public class MySingleton {
     private RequestQueue mRequestQueue;
     private ImageLoader mImageLoader;
     private static Context mCtx;
-    //private static String URL = "http://qrsync-bulut.rhcloud.com";
-    private static String URL = "http://192.168.137.1:8000";
+    private static String URL = "http://qrsync-bulut.rhcloud.com";
+    //private static String URL = "http://192.168.137.1:8000";
 
     private MySingleton(Context context) {
         mCtx = context;

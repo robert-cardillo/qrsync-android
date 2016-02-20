@@ -81,24 +81,23 @@ public class MyGcmListenerService extends GcmListenerService {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
                 PendingIntent.FLAG_ONE_SHOT);
 
-        Intent copyActionIntent = new Intent();
-        copyActionIntent.setAction("com.snowy73.qrsync.COPY");
+        Intent copyActionIntent = new Intent("com.snowy73.qrsync.COPY");
         copyActionIntent.putExtra(Intent.EXTRA_TEXT, message);
+        copyActionIntent.putExtra("notificationId", notificationId);
         PendingIntent copyActionPendingIntent = PendingIntent.getBroadcast(this, 0, copyActionIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Intent shareActionIntent = new Intent();
-        shareActionIntent.setAction(Intent.ACTION_SEND);
+        Intent shareActionIntent = new Intent("com.snowy73.qrsync.SHARE");
         shareActionIntent.putExtra(Intent.EXTRA_TEXT, message);
-        shareActionIntent.setType("text/plain");
-        PendingIntent shareActionPendingIntent = PendingIntent.getActivity(this, 0, shareActionIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        shareActionIntent.putExtra("notificationId", notificationId);
+        PendingIntent shareActionPendingIntent = PendingIntent.getBroadcast(this, 0, shareActionIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         Intent openActionIntent = null;
         PendingIntent openActionPendingIntent = null;
         if (message.startsWith("http://") || message.startsWith("https://")) {
-            openActionIntent = new Intent();
-            openActionIntent.setAction(Intent.ACTION_VIEW);
-            openActionIntent.setData(Uri.parse(message));
-            openActionPendingIntent = PendingIntent.getActivity(this, 0, openActionIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            openActionIntent = new Intent("com.snowy73.qrsync.VIEW");
+            openActionIntent.putExtra(Intent.EXTRA_TEXT, message);
+            openActionIntent.putExtra("notificationId", notificationId);
+            openActionPendingIntent = PendingIntent.getBroadcast(this, 0, openActionIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         }
 
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
@@ -109,6 +108,7 @@ public class MyGcmListenerService extends GcmListenerService {
                 .setAutoCancel(true)
                 .setSound(defaultSoundUri)
                 .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .addAction(android.R.drawable.ic_menu_save, "Copy", copyActionPendingIntent)
                 .addAction(android.R.drawable.ic_menu_share, "Share", shareActionPendingIntent);
         if (openActionIntent != null) {

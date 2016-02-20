@@ -65,11 +65,13 @@
             android:label="Scan QR Code" />
 
         <receiver
-            android:name=".CopyReceiver"
+            android:name=".ActionReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.snowy73.qrsync.COPY" />
+                <action android:name="com.snowy73.qrsync.SHARE" />
+                <action android:name="com.snowy73.qrsync.VIEW" />
             </intent-filter>
         </receiver>
 
