@@ -55,7 +55,8 @@ public class ShareActivity extends AppCompatActivity {
                             try {
                                 String status = response.getString("status");
                                 if (status.equals("success")) {
-                                    Toast.makeText(getApplicationContext(), R.string.send_successful, Toast.LENGTH_SHORT).show();
+                                    String message = response.getString("message");
+                                    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
                                 } else {
                                     String error = response.getString("error");
                                     Toast.makeText(getApplicationContext(), error, Toast.LENGTH_SHORT).show();
